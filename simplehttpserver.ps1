@@ -1,5 +1,11 @@
-$flist = ((Get-ChildItem -Path root/ -name -recurse -file).replace("\", "/"))
+function _get_files_list {
+	param ()
+	Set-Variable -Name "flist" -Value ((Get-ChildItem -Path root/ -name -recurse -file).replace("\", "/")) -Scope "Script"
+	
+}
 
+$flist = ""
+_get_files_list
 
 $tcplistener = New-Object System.Net.Sockets.TcpListener(80)
 $tcplistener.Stop()
@@ -48,12 +54,19 @@ try {
 
 			if ($method -eq "GET"){
 				$ffound = ($flist | Where-Object {$_ -eq $resource})
-				if ($ffound -ne $null){
+				if ($null -ne $ffound -and $True -eq ([System.IO.File]::Exists("root/" + $ffound)) ){
 					$status = 200
 					$tx_bin = [System.Text.Encoding]::UTF8.GetBytes( "HTTP/1.0 200 OK`n`n" + (Get-Content ("root/" + $ffound)) )
 				}else{
-					$status = 404
-					$tx_bin = [System.Text.Encoding]::UTF8.GetBytes("HTTP/1.0 404 Not Found`n`n404 Not Found`n")
+					_get_files_list
+					$ffound = ($flist | Where-Object {$_ -eq $resource})
+					if ($null -ne $ffound){
+						$status = 200
+						$tx_bin = [System.Text.Encoding]::UTF8.GetBytes( "HTTP/1.0 200 OK`n`n" + (Get-Content ("root/" + $ffound)) )
+					}else{
+						$status = 404
+						$tx_bin = [System.Text.Encoding]::UTF8.GetBytes("HTTP/1.0 404 Not Found`n`n404 Not Found`n")
+					}
 				}
 			}else{
 				$status = 405
